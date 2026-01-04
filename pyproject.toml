@@ -1,0 +1,28 @@
+[project]
+name = "doc-rag-assistant"
+version = "0.1.0"
+description = "Asistente RAG local para documentación (PDF/MD) con citas."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "streamlit>=1.31",
+  "pydantic>=2.6",
+  "pypdf>=4.0",
+  "sentence-transformers>=3.0",
+  "faiss-cpu>=1.8",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.5",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
