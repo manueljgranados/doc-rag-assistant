@@ -47,12 +47,16 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=413, detail=f"Máximo {SETTINGS.max_upload_mb} MB.")
 
     doc_id = hashlib.sha256(content).hexdigest()
-    safe_name = (Path(file.filename).name if file.filename else f"{doc_id}{suffix}").replace(" ", "_")
+    safe_name = (Path(file.filename).name if file.filename else f"{doc_id}{suffix}").replace(
+        " ", "_"
+    )
     stored_filename = f"{doc_id[:12]}_{safe_name}"
     stored_path = SETTINGS.uploads_dir / stored_filename
     stored_path.write_bytes(content)
 
-    return UploadResponse(doc_id=doc_id, stored_filename=stored_filename, original_filename=safe_name)
+    return UploadResponse(
+        doc_id=doc_id, stored_filename=stored_filename, original_filename=safe_name
+    )
 
 
 @app.post("/documents/reindex", response_model=ReindexResponse)
@@ -105,7 +109,7 @@ def query(req: QueryRequest):
             context_blocks = _build_context_blocks(results, max_blocks=top_k)
             answer = answerer.answer(req.question, context_blocks)
             return QueryResponse(answer=answer, citations=citations)
-        except Exception as e:
+        except Exception:
             # cae a modo extractivo
             pass
 
@@ -119,4 +123,3 @@ def query(req: QueryRequest):
         answer = "\n".join(lines)
 
     return QueryResponse(answer=answer, citations=citations)
-

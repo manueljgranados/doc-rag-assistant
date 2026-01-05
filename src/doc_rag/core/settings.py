@@ -26,7 +26,9 @@ class Settings:
 
     # OpenAI (opcional)
     use_openai: bool = os.getenv("RAG_USE_OPENAI", "false").lower() == "true"
-    openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1")  # prioriza calidad :contentReference[oaicite:1]{index=1}
+    openai_model: str = os.getenv(
+        "OPENAI_MODEL", "gpt-4.1"
+    )  # prioriza calidad :contentReference[oaicite:1]{index=1}
 
 
 SETTINGS = Settings()
