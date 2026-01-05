@@ -25,7 +25,12 @@ with st.sidebar:
 
 question = st.text_input("Pregunta")
 if st.button("Consultar") and question.strip():
-    payload = {"question": question, "top_k": top_k, "use_openai": use_openai, "use_rerank": use_rerank}
+    payload = {
+        "question": question,
+        "top_k": top_k,
+        "use_openai": use_openai,
+        "use_rerank": use_rerank,
+    }
     r = requests.post(f"{API}/query", json=payload, timeout=120)
     if r.status_code != 200:
         st.error(r.text)

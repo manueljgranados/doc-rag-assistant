@@ -41,7 +41,9 @@ class Retriever:
             )
         return self._reranker
 
-    def search(self, question: str, top_k: int, use_rerank: bool | None = None) -> list[dict[str, Any]]:
+    def search(
+        self, question: str, top_k: int, use_rerank: bool | None = None
+    ) -> list[dict[str, Any]]:
         if self._index is None or not self._chunks_by_id:
             self.load()
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import platform
 
+
 @dataclass(frozen=True)
 class Settings:
     # Rutas
@@ -42,7 +43,6 @@ class Settings:
         "mps" if platform.system() == "Darwin" else "cpu",
     )
     retrieve_candidates: int = int(os.getenv("RAG_RETRIEVE_CANDIDATES", "40"))
-
 
 
 SETTINGS = Settings()
