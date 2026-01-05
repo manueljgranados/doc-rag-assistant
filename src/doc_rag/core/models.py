@@ -18,6 +18,7 @@ class QueryRequest(BaseModel):
     question: str = Field(min_length=1)
     top_k: int | None = None
     use_openai: bool | None = None
+    use_rerank: bool | None = None
 
 
 class Citation(BaseModel):

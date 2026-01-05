@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import platform
 
 @dataclass(frozen=True)
 class Settings:
@@ -29,6 +30,19 @@ class Settings:
     openai_model: str = os.getenv(
         "OPENAI_MODEL", "gpt-4.1"
     )  # prioriza calidad :contentReference[oaicite:1]{index=1}
+
+    # Re-rank (CrossEncoder)
+    use_rerank: bool = os.getenv("RAG_USE_RERANK", "true").lower() == "true"
+    rerank_model: str = os.getenv(
+        "RAG_RERANK_MODEL",
+        "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    )  # multilingüe :contentReference[oaicite:1]{index=1}
+    rerank_device: str = os.getenv(
+        "RAG_RERANK_DEVICE",
+        "mps" if platform.system() == "Darwin" else "cpu",
+    )
+    retrieve_candidates: int = int(os.getenv("RAG_RETRIEVE_CANDIDATES", "40"))
+
 
 
 SETTINGS = Settings()

@@ -20,11 +20,12 @@ with st.sidebar:
 
     st.divider()
     use_openai = st.checkbox("Usar OpenAI (si hay API key)", value=False)
+    use_rerank = st.checkbox("Usar reranker (mejor precisión)", value=True)
     top_k = st.slider("Top-K", 1, 10, 5)
 
 question = st.text_input("Pregunta")
 if st.button("Consultar") and question.strip():
-    payload = {"question": question, "top_k": top_k, "use_openai": use_openai}
+    payload = {"question": question, "top_k": top_k, "use_openai": use_openai, "use_rerank": use_rerank}
     r = requests.post(f"{API}/query", json=payload, timeout=120)
     if r.status_code != 200:
         st.error(r.text)

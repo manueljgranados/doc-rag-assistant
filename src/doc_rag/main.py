@@ -80,9 +80,10 @@ def _build_context_blocks(results: list[dict], max_blocks: int = 5) -> list[str]
 def query(req: QueryRequest):
     top_k = req.top_k or SETTINGS.top_k
     use_openai = req.use_openai if req.use_openai is not None else SETTINGS.use_openai
+    use_rerank = req.use_rerank if req.use_rerank is not None else SETTINGS.use_rerank
 
     try:
-        results = retriever.search(req.question, top_k=top_k)
+        results = retriever.search(req.question, top_k=top_k, use_rerank=use_rerank)
     except FileNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
