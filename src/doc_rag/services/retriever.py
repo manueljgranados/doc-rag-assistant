@@ -117,3 +117,31 @@ class Retriever:
                 break
 
         return final
+
+    def neighbors(self, chunk_id: int, n: int = 1, same_page: bool = True) -> list[dict[str, Any]]:
+        """
+        Devuelve vecinos (previos y posteriores) del mismo documento.
+        Por defecto restringe a la misma página (útil en papers).
+        """
+        if self._index is None or not self._chunks_by_id:
+            self.load()
+
+        base = self._chunks_by_id.get(int(chunk_id))
+        if not base:
+            return []
+
+        base_doc = base.get("doc_id")
+        base_page = base.get("page")
+
+        out: list[dict[str, Any]] = []
+        deltas = list(range(-n, 0)) + list(range(1, n + 1))  # prev..., next...
+        for d in deltas:
+            rec = self._chunks_by_id.get(int(chunk_id) + d)
+            if not rec:
+                continue
+            if rec.get("doc_id") != base_doc:
+                continue
+            if same_page and rec.get("page") != base_page:
+                continue
+            out.append(rec)
+        return out

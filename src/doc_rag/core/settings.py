@@ -44,6 +44,12 @@ class Settings:
     )
     retrieve_candidates: int = int(os.getenv("RAG_RETRIEVE_CANDIDATES", "40"))
 
+    # Contexto adyacente (para OpenAI)
+    adjacent_context: bool = os.getenv("RAG_ADJACENT_CONTEXT", "true").lower() == "true"
+    adjacent_n: int = int(os.getenv("RAG_ADJACENT_N", "1"))
+    adjacent_same_page: bool = os.getenv("RAG_ADJACENT_SAME_PAGE", "true").lower() == "true"
+    adjacent_max_blocks: int = int(os.getenv("RAG_ADJACENT_MAX_BLOCKS", "12"))
+
 
 SETTINGS = Settings()
 SETTINGS.data_dir.mkdir(parents=True, exist_ok=True)

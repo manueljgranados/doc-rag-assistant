@@ -14,7 +14,7 @@ from doc_rag.core.models import (
     UploadResponse,
 )
 from doc_rag.core.settings import SETTINGS
-from doc_rag.services.indexer import rebuild_global_index
+from doc_rag.services.indexer import rebuild_global_index, list_uploads, sha256_file
 from doc_rag.services.retriever import Retriever
 from doc_rag.services.intent import infer_intent
 
@@ -34,6 +34,20 @@ retriever = Retriever(SETTINGS)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/documents")
+def documents():
+    items = []
+    for p in list_uploads(SETTINGS.uploads_dir):
+        items.append(
+            {
+                "doc_id": sha256_file(p),
+                "source_filename": p.name,
+                "size_bytes": p.stat().st_size,
+            }
+        )
+    return items
 
 
 @app.post("/documents/upload", response_model=UploadResponse)
@@ -77,6 +91,36 @@ def _build_context_blocks(results: list[dict], max_blocks: int = 5) -> list[str]
     return blocks
 
 
+def _build_context_blocks_with_neighbors(
+    results: list[dict],
+    max_blocks: int = 12,
+    neighbor_n: int = 1,
+    same_page: bool = True,
+) -> list[str]:
+    blocks: list[str] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(rec: dict) -> None:
+        key = (rec["source_filename"], rec["anchor"])
+        if key in seen:
+            return
+        seen.add(key)
+        cite = f"[{rec['source_filename']} | {rec['anchor']}]"
+        blocks.append(f"{cite}\n{rec['text']}")
+
+    for r in results:
+        # vecinos previos
+        for nb in retriever.neighbors(int(r["id"]), n=neighbor_n, same_page=same_page):
+            add(nb)
+        # chunk principal
+        add(r)
+
+        if len(blocks) >= max_blocks:
+            break
+
+    return blocks[:max_blocks]
+
+
 @app.post("/query", response_model=QueryResponse)
 def query(req: QueryRequest):
     top_k = req.top_k or SETTINGS.top_k
@@ -117,11 +161,20 @@ def query(req: QueryRequest):
             from doc_rag.adapters.llm.openai_client import OpenAIAnswerer
 
             answerer = OpenAIAnswerer(model=SETTINGS.openai_model)
-            context_blocks = _build_context_blocks(results, max_blocks=top_k)
+            if SETTINGS.adjacent_context:
+                context_blocks = _build_context_blocks_with_neighbors(
+                    results,
+                    max_blocks=SETTINGS.adjacent_max_blocks,
+                    neighbor_n=SETTINGS.adjacent_n,
+                    same_page=SETTINGS.adjacent_same_page,
+                )
+            else:
+                context_blocks = _build_context_blocks(results, max_blocks=top_k)
+
             answer = answerer.answer(req.question, context_blocks, prompt_style=plan.prompt_style)
             return QueryResponse(answer=answer, citations=citations)
         except Exception:
-            # cae a modo extractivo
+            # pasa a modo extractivo
             pass
 
     # Modo extractivo (sin LLM)
