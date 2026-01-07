@@ -19,13 +19,16 @@ class QueryRequest(BaseModel):
     top_k: int | None = None
     use_openai: bool | None = None
     use_rerank: bool | None = None
+    doc_id: str | None = None
+    source_filename: str | None = None
 
 
 class Citation(BaseModel):
     doc_id: str
     source_filename: str
     page: int | None
-    anchor: str  # p{page}:c{start}-{end} o md:c{start}-{end}
+    anchor: str
+    section: str | None = None
     score: float
     snippet: str
 

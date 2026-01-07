@@ -11,6 +11,7 @@ from doc_rag.adapters.vectorstore.faiss_store import FaissStore
 from doc_rag.core.settings import Settings
 from doc_rag.services.chunking import chunk_text
 from doc_rag.services.embedding import Embedder
+import re
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class ChunkRecord:
     page: int | None
     char_start: int
     char_end: int
+    section: str | None
     text: str
 
     def anchor(self) -> str:
@@ -65,7 +67,15 @@ def rebuild_global_index(settings: Settings) -> tuple[int, int]:
         ext = file_path.suffix.lower()
 
         if ext == ".pdf":
+            stop = False
             for page in load_pdf_pages(file_path):
+                if references_start(page.text):
+                    stop = True
+                if stop:
+                    break
+
+                page_section = guess_section(page.text)
+
                 for ch in chunk_text(page.text, settings.chunk_size, settings.chunk_overlap):
                     chunk_records.append(
                         ChunkRecord(
@@ -75,6 +85,7 @@ def rebuild_global_index(settings: Settings) -> tuple[int, int]:
                             page=page.page_number,
                             char_start=ch.char_start,
                             char_end=ch.char_end,
+                            section=page_section,
                             text=ch.text,
                         )
                     )
@@ -90,6 +101,7 @@ def rebuild_global_index(settings: Settings) -> tuple[int, int]:
                         page=None,
                         char_start=ch.char_start,
                         char_end=ch.char_end,
+                        section=None,
                         text=ch.text,
                     )
                 )
@@ -114,6 +126,7 @@ def rebuild_global_index(settings: Settings) -> tuple[int, int]:
                         "page": c.page,
                         "char_start": c.char_start,
                         "char_end": c.char_end,
+                        "section": c.section,
                         "anchor": c.anchor(),
                         "text": c.text,
                     },
@@ -123,3 +136,29 @@ def rebuild_global_index(settings: Settings) -> tuple[int, int]:
             )
 
     return len(uploads), len(chunk_records)
+
+
+_SECTION_PATTERNS: list[tuple[str, re.Pattern]] = [
+    ("abstract", re.compile(r"\babstract\b", re.I)),
+    ("introduction", re.compile(r"\bintroduction\b", re.I)),
+    ("methods", re.compile(r"\b(methods?|methodology|materials?\s+and\s+methods?)\b", re.I)),
+    ("results", re.compile(r"\bresults?\b", re.I)),
+    ("discussion", re.compile(r"\bdiscussion\b", re.I)),
+    ("conclusion", re.compile(r"\bconclusions?\b", re.I)),
+    ("related_work", re.compile(r"\brelated\s+work\b", re.I)),
+]
+
+_REFERENCES_RE = re.compile(r"\b(references|bibliography|works\s+cited)\b", re.I)
+
+
+def guess_section(text: str) -> str | None:
+    head = text[:800]
+    for name, pat in _SECTION_PATTERNS:
+        if pat.search(head):
+            return name
+    return None
+
+
+def references_start(text: str) -> bool:
+    head = text[:1200]
+    return bool(_REFERENCES_RE.search(head))

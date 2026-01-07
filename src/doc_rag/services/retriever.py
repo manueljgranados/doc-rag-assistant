@@ -42,7 +42,13 @@ class Retriever:
         return self._reranker
 
     def search(
-        self, question: str, top_k: int, use_rerank: bool | None = None
+        self,
+        question: str,
+        top_k: int,
+        use_rerank: bool | None = None,
+        doc_id: str | None = None,
+        source_filename: str | None = None,
+        preferred_sections: tuple[str, ...] = (),
     ) -> list[dict[str, Any]]:
         if self._index is None or not self._chunks_by_id:
             self.load()
@@ -63,6 +69,12 @@ class Retriever:
                 continue
             candidates.append({**rec, "score_dense": float(score)})
 
+        if doc_id:
+            candidates = [c for c in candidates if c.get("doc_id") == doc_id]
+        if source_filename:
+            candidates = [c for c in candidates if c.get("source_filename") == source_filename]
+        if not candidates:
+            return []
         if not candidates:
             return []
 
@@ -81,6 +93,16 @@ class Retriever:
             for c in candidates:
                 c["score"] = c["score_dense"]
             candidates.sort(key=lambda x: x["score"], reverse=True)
+
+        # Ordenar por secciones
+        if preferred_sections:
+            pref = set(s.lower() for s in preferred_sections)
+
+            def section_priority(rec: dict[str, Any]) -> int:
+                s = (rec.get("section") or "").lower()
+                return 1 if s in pref else 0
+
+            candidates.sort(key=lambda x: (section_priority(x), x["score"]), reverse=True)
 
         # Deduplicación mínima por (fichero+ancla)
         seen = set()

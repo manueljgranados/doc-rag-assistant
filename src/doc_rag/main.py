@@ -16,6 +16,7 @@ from doc_rag.core.models import (
 from doc_rag.core.settings import SETTINGS
 from doc_rag.services.indexer import rebuild_global_index
 from doc_rag.services.retriever import Retriever
+from doc_rag.services.intent import infer_intent
 
 app = FastAPI(title="Doc RAG Assistant", version="0.1.0")
 
@@ -81,9 +82,17 @@ def query(req: QueryRequest):
     top_k = req.top_k or SETTINGS.top_k
     use_openai = req.use_openai if req.use_openai is not None else SETTINGS.use_openai
     use_rerank = req.use_rerank if req.use_rerank is not None else SETTINGS.use_rerank
+    plan = infer_intent(req.question)
 
     try:
-        results = retriever.search(req.question, top_k=top_k, use_rerank=use_rerank)
+        results = retriever.search(
+            req.question,
+            top_k=top_k,
+            use_rerank=use_rerank,
+            doc_id=req.doc_id,
+            source_filename=req.source_filename,
+            preferred_sections=plan.preferred_sections,
+        )
     except FileNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -97,6 +106,7 @@ def query(req: QueryRequest):
                 page=r.get("page"),
                 anchor=r["anchor"],
                 score=float(r["score"]),
+                section=r.get("section"),
                 snippet=snippet,
             )
         )
@@ -108,7 +118,7 @@ def query(req: QueryRequest):
 
             answerer = OpenAIAnswerer(model=SETTINGS.openai_model)
             context_blocks = _build_context_blocks(results, max_blocks=top_k)
-            answer = answerer.answer(req.question, context_blocks)
+            answer = answerer.answer(req.question, context_blocks, prompt_style=plan.prompt_style)
             return QueryResponse(answer=answer, citations=citations)
         except Exception:
             # cae a modo extractivo

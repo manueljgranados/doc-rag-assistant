@@ -23,6 +23,25 @@ with st.sidebar:
     use_rerank = st.checkbox("Usar reranker (mejor precisión)", value=True)
     top_k = st.slider("Top-K", 1, 10, 5)
 
+    st.divider()
+    st.subheader("Filtro por paper")
+
+    docs = []
+    try:
+        r = requests.get(f"{API}/documents", timeout=10)
+        if r.status_code == 200:
+            docs = r.json()
+    except Exception:
+        pass
+
+    options = ["(Todos)"] + [d["source_filename"] for d in docs]
+    selected = st.selectbox("Paper", options)
+
+    selected_doc = None
+    if selected != "(Todos)":
+        selected_doc = next((d for d in docs if d["source_filename"] == selected), None)
+
+
 question = st.text_input("Pregunta")
 if st.button("Consultar") and question.strip():
     payload = {
@@ -31,7 +50,12 @@ if st.button("Consultar") and question.strip():
         "use_openai": use_openai,
         "use_rerank": use_rerank,
     }
+    if selected_doc:
+        payload["doc_id"] = selected_doc["doc_id"]
+        payload["source_filename"] = selected_doc["source_filename"]
+
     r = requests.post(f"{API}/query", json=payload, timeout=120)
+
     if r.status_code != 200:
         st.error(r.text)
     else:

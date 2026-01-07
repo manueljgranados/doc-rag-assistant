@@ -37,13 +37,26 @@ class OpenAIAnswerer:
         self.client = OpenAI(api_key=api_key)
         self.model = model
 
-    def answer(self, question: str, context_blocks: list[str]) -> str:
-        instructions = (
+    def answer(self, question: str, context_blocks: list[str], prompt_style: str = "about") -> str:
+        base = (
             "Responda en español de España y con tono formal. "
             "Use únicamente la información del contexto. "
             "Si falta información, indíquelo. "
             "Incluya referencias a las citas tal como aparecen (entre corchetes)."
         )
+
+        if prompt_style == "objectives_conclusions":
+            style = (
+                "Estructure la respuesta en dos apartados:\n"
+                "1) Objetivos (lista con viñetas)\n"
+                "2) Conclusiones (lista con viñetas)\n"
+                "Cada viñeta debe incluir al menos una cita."
+            )
+        else:
+            style = "Responda directamente a la pregunta. Incluya citas en las frases relevantes."
+
+        instructions = f"{base}\n{style}"
+
         context = "\n\n".join(context_blocks)
 
         resp = self.client.responses.create(
